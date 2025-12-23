@@ -1,4 +1,0 @@
-Pillow
-reportlab
-pymupdf
-pikepdf
