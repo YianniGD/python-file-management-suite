@@ -1,10 +1,17 @@
 import os
 import shutil
-import win32com.client
-import pythoncom  # Required for threading
+try:
+    import win32com.client
+    import pythoncom  # Required for threading
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 def get_illustrator():
     """Attempts to connect to Illustrator."""
+    if not HAS_WIN32:
+        return None
+
     versions = [
         "Illustrator.Application",       # Version independent
         "Illustrator.Application.29",    # 2025
@@ -19,6 +26,9 @@ def get_illustrator():
     return None
 
 def batch_convert_to_svg(source_dir, output_dir, archive_dir, progress_callback=None):
+    if not HAS_WIN32:
+        return False, "pywin32 is not installed or supported on this system."
+
     # 1. Initialize COM for this thread (Crucial for GUI apps)
     pythoncom.CoInitialize()
     

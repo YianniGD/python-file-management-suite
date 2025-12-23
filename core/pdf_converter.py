@@ -1,9 +1,17 @@
-import win32com.client
 import os
 import shutil
 
+try:
+    import win32com.client
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
 def get_illustrator():
     """Attempts to connect to Illustrator regardless of version."""
+    if not HAS_WIN32:
+        return None
+
     versions = ["Illustrator.Application.29", "Illustrator.Application.28",
                 "Illustrator.Application.27", "Illustrator.Application"]
     for v in versions:
@@ -14,6 +22,9 @@ def get_illustrator():
     return None
 
 def batch_convert_to_pdf(source_dir, output_dir, archive_dir, progress_callback=None):
+    if not HAS_WIN32:
+        raise ImportError("pywin32 is not installed or supported on this system.")
+
     ai_app = get_illustrator()
     if not ai_app:
         raise ConnectionError("Could not connect to Adobe Illustrator. Is it installed?")
