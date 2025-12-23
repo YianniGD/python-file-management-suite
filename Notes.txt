@@ -1,0 +1,1 @@
+rn this to compile; python -m PyInstaller --noconsole --onefile --name "GraphicDesignSuite" main_app.py
