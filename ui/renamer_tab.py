@@ -1,44 +1,39 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from core import renamer
+from ui.ui_utils import DirectorySelector
 
 class RenamerTab(ttk.Frame):
-    def __init__(self, parent, main_window=None): # <--- UPDATED
+    def __init__(self, parent, main_window=None):
         super().__init__(parent, padding=10)
-        self.main_window = main_window # <--- STORE REFERENCE
+        self.main_window = main_window
+
+        self.grid_columnconfigure(0, weight=1)
 
         frame = ttk.LabelFrame(self, text="Bulk File Renamer", padding=10)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        frame.grid(row=0, column=0, sticky="ew")
+        frame.grid_columnconfigure(0, weight=1)
 
-        # Directory
-        ttk.Label(frame, text="Target Directory:").pack(anchor="w")
-        self.dir_path = tk.StringVar()
-        entry_row = ttk.Frame(frame)
-        entry_row.pack(fill=tk.X, pady=5)
-        ttk.Entry(entry_row, textvariable=self.dir_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(entry_row, text="Browse", command=self._browse_dir).pack(side=tk.LEFT, padx=5)
+        self.dir_selector = DirectorySelector(frame, "Target Directory")
+        self.dir_selector.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
-        # Names File
-        ttk.Label(frame, text="Names List (.txt, comma separated):").pack(anchor="w", pady=(10,0))
+        ttk.Label(frame, text="Names List (.txt, comma separated):").grid(row=1, column=0, sticky="w")
         self.names_path = tk.StringVar()
         name_row = ttk.Frame(frame)
-        name_row.pack(fill=tk.X, pady=5)
-        ttk.Entry(name_row, textvariable=self.names_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(name_row, text="Browse", command=self._browse_file).pack(side=tk.LEFT, padx=5)
+        name_row.grid(row=2, column=0, sticky="ew")
+        name_row.grid_columnconfigure(0, weight=1)
+        ttk.Entry(name_row, textvariable=self.names_path).grid(row=0, column=0, sticky="ew")
+        ttk.Button(name_row, text="Browse", command=self._browse_file).grid(row=0, column=1, padx=(5, 0))
 
         # Action
-        ttk.Button(frame, text="Rename Files", command=self._run).pack(fill=tk.X, pady=20)
-
-    def _browse_dir(self):
-        d = filedialog.askdirectory()
-        if d: self.dir_path.set(d)
+        ttk.Button(frame, text="Rename Files", command=self._run).grid(row=3, column=0, sticky="ew", pady=(20, 0))
 
     def _browse_file(self):
         f = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
         if f: self.names_path.set(f)
 
     def _run(self):
-        d = self.dir_path.get()
+        d = self.dir_selector.get()
         f = self.names_path.get()
         if not d or not f:
             messagebox.showerror("Error", "Please select directory and names file.")

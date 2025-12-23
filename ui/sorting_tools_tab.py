@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 from core import pattern_sorter, structure_sorter
+from core import photo_organizer
 
 class SortingToolsTab(ttk.Frame):
     def __init__(self, parent, main_window=None):
@@ -13,9 +14,12 @@ class SortingToolsTab(ttk.Frame):
 
         pattern_frame = self._create_pattern_sort_tab(notebook)
         structure_frame = self._create_structure_sort_tab(notebook)
+        # ADDED: New internal tab
+        photo_frame = self._create_photo_sort_tab(notebook)
 
         notebook.add(pattern_frame, text="Pattern Sorter")
         notebook.add(structure_frame, text="Structure Sorter")
+        notebook.add(photo_frame, text="Photo/Date Sorter") # ADDED
 
     def _create_pattern_sort_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
@@ -99,6 +103,48 @@ class SortingToolsTab(ttk.Frame):
         self.run_ext_btn = ttk.Button(f2, text="Run Extension Sort", command=self._run_ext)
         self.run_ext_btn.pack(fill=tk.X, pady=5)
 
+        return frame
+
+    def _create_photo_sort_tab(self, parent):
+        frame = ttk.Frame(parent, padding=10)
+        
+        container = ttk.LabelFrame(frame, text="Sort by Metadata (EXIF)", padding=10)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(container, text="Organizes images into folders based on the date they were taken.", 
+                  wraplength=400).pack(anchor="w", pady=(0,10))
+
+        ttk.Label(container, text="Target Directory:").pack(anchor="w")
+        self.src_photo = tk.StringVar()
+        row = ttk.Frame(container)
+        row.pack(fill=tk.X, pady=5)
+        ttk.Entry(row, textvariable=self.src_photo).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(row, text="Browse", command=lambda: self.src_photo.set(filedialog.askdirectory())).pack(side=tk.LEFT, padx=5)
+
+        config_frame = ttk.LabelFrame(container, text="Sort Configuration", padding=10)
+        config_frame.pack(fill=tk.X, pady=15)
+        
+        ttk.Label(config_frame, text="Folder Structure (e.g., %Y/%m):").grid(row=0, column=0, sticky="w", pady=5)
+        self.photo_fmt = tk.StringVar(value="%Y/%m-%b")
+        ttk.Entry(config_frame, textvariable=self.photo_fmt).grid(row=0, column=1, sticky="ew", padx=10, pady=5)
+
+        ttk.Label(config_frame, text="Rename Format (optional):").grid(row=1, column=0, sticky="w", pady=5)
+        self.photo_rename_fmt = tk.StringVar(value="")
+        ttk.Entry(config_frame, textvariable=self.photo_rename_fmt).grid(row=1, column=1, sticky="ew", padx=10, pady=5)
+
+        self.photo_recursive = tk.BooleanVar(value=False)
+        ttk.Checkbutton(config_frame, text="Search Recursively", variable=self.photo_recursive).grid(row=2, column=0, sticky="w", pady=5)
+
+        self.photo_copy = tk.BooleanVar(value=False)
+        ttk.Checkbutton(config_frame, text="Copy Files (instead of move)", variable=self.photo_copy).grid(row=3, column=0, sticky="w", pady=5)
+
+        self.photo_keep_filename = tk.BooleanVar(value=False)
+        ttk.Checkbutton(config_frame, text="Keep Original Filename on Duplicate", variable=self.photo_keep_filename).grid(row=4, column=0, sticky="w", pady=5)
+
+
+        self.run_photo_sort_btn = ttk.Button(container, text="Run Photo Organizer", command=self._run_photo_sort)
+        self.run_photo_sort_btn.pack(fill=tk.X, pady=20)
+        
         return frame
 
     # --- Pattern Sorter Methods ---
@@ -187,6 +233,35 @@ class SortingToolsTab(ttk.Frame):
 
     def _finish_ext(self, msg):
         self.run_ext_btn.config(state="normal")
+        if self.main_window:
+            self.main_window.progress_label.config(text="Ready.")
+            self.main_window.progress_bar.config(value=0)
+        messagebox.showinfo("Result", msg)
+
+    def _run_photo_sort(self):
+        directory = self.src_photo.get()
+        fmt = self.photo_fmt.get()
+        rename_fmt = self.photo_rename_fmt.get() or None
+        recursive = self.photo_recursive.get()
+        copy = self.photo_copy.get()
+        keep_filename = self.photo_keep_filename.get()
+
+        if not directory: return messagebox.showerror("Error", "Select a folder.")
+
+        def cb(curr, total, msg):
+            if self.main_window:
+                self.main_window.after(0, lambda: self._update_progress(curr, total, msg))
+
+        self.run_photo_sort_btn.config(state="disabled")
+        # Run in a thread so the UI doesn't freeze
+        threading.Thread(target=self._thread_photo, args=(directory, fmt, rename_fmt, recursive, copy, keep_filename, cb), daemon=True).start()
+
+    def _thread_photo(self, d, f, rename_fmt, recursive, copy, keep_filename, cb):
+        success, msg = photo_organizer.organize_by_date(d, structure=f, progress_cb=cb, rename_format=rename_fmt, recursive=recursive, copy_files=copy, keep_filename=keep_filename)
+        self.after(0, lambda: self._finish_photo_sort(msg))
+
+    def _finish_photo_sort(self, msg):
+        self.run_photo_sort_btn.config(state="normal")
         if self.main_window:
             self.main_window.progress_label.config(text="Ready.")
             self.main_window.progress_bar.config(value=0)

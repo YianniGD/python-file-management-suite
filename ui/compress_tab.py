@@ -3,35 +3,37 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 from pathlib import Path
 import threading
 import pikepdf
+from ui.ui_utils import DirectorySelector
 
 class CompressTab(ttk.Frame):
     def __init__(self, parent, main_window=None):
         super().__init__(parent, padding=10)
         self.main_window = main_window
 
-        frame = ttk.LabelFrame(self, text="PDF Compressor", padding=10)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.grid_columnconfigure(0, weight=1)
 
-        # Directory
-        ttk.Label(frame, text="Target Directory (Finds .pdf files):").pack(anchor="w")
-        self.dir_path = tk.StringVar()
-        row = ttk.Frame(frame)
-        row.pack(fill=tk.X, pady=5)
-        ttk.Entry(row, textvariable=self.dir_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(row, text="Browse", command=self._browse).pack(side=tk.LEFT, padx=5)
+        frame = ttk.LabelFrame(self, text="PDF Compressor", padding=10)
+        frame.grid(row=0, column=0, sticky="ew")
+        frame.grid_columnconfigure(0, weight=1)
+
+        self.dir_selector = DirectorySelector(frame, "Target Directory (Finds .pdf files):")
+        self.dir_selector.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
         # Action Button
         self.btn_run = ttk.Button(frame, text="Start Compression", command=self.start_thread)
-        self.btn_run.pack(fill=tk.X, pady=20)
+        self.btn_run.grid(row=1, column=0, sticky="ew", pady=10)
 
         # Log Area
-        ttk.Label(frame, text="Log:", font=("Arial", 10)).pack(anchor="w", padx=10)
-        self.log_area = scrolledtext.ScrolledText(frame, height=15, state='disabled', font=("Consolas", 9))
-        self.log_area.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        log_frame = ttk.LabelFrame(self, text="Log", padding=10)
+        log_frame.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
+        log_frame.grid_columnconfigure(0, weight=1)
+        log_frame.grid_rowconfigure(0, weight=1)
 
-    def _browse(self):
-        d = filedialog.askdirectory()
-        if d: self.dir_path.set(d)
+        self.log_area = scrolledtext.ScrolledText(log_frame, height=15, state='disabled', font=("Consolas", 9))
+        self.log_area.grid(row=0, column=0, sticky="nsew")
+
+        self.grid_rowconfigure(1, weight=1)
+
 
     def log(self, message):
         """Updates the text area in a thread-safe way"""
@@ -42,7 +44,7 @@ class CompressTab(ttk.Frame):
 
     def start_thread(self):
         """Runs compression in a separate thread to keep UI responsive"""
-        source_dir = self.dir_path.get()
+        source_dir = self.dir_selector.get()
         if not source_dir:
             messagebox.showwarning("Warning", "Please select a directory first.")
             return
@@ -69,7 +71,7 @@ class CompressTab(ttk.Frame):
             files = list(source_path.glob("*.pdf"))
             if not files:
                 self.log("No PDF files found in this directory.")
-                self.reset_ui()
+                self.after(0, self.reset_ui)
                 return
 
             total_saved = 0
@@ -77,7 +79,8 @@ class CompressTab(ttk.Frame):
             for i, file_path in enumerate(files):
                 try:
                     if self.main_window:
-                        self.main_window.progress_bar['value'] = (i + 1) / len(files) * 100
+                        # This progress update is a bit tricky with indeterminate mode
+                        pass
 
                     output_filename = output_path / file_path.name
                     
@@ -105,7 +108,7 @@ class CompressTab(ttk.Frame):
         except Exception as e:
             self.log(f"Critical Error: {e}")
         
-        self.reset_ui()
+        self.after(0, self.reset_ui)
 
     def reset_ui(self):
         self.btn_run.config(state="normal", text="Start Compression")

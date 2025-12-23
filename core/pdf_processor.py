@@ -1,6 +1,7 @@
 import os
 import math
 import warnings
+import pikepdf
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, landscape
@@ -11,6 +12,44 @@ from reportlab.lib.utils import ImageReader
 # Suppress Pillow warnings
 warnings.simplefilter('ignore', Image.DecompressionBombWarning)
 Image.MAX_IMAGE_PIXELS = 200000000
+
+def linearize_pdf(input_path, output_path):
+    """Linearizes a single PDF."""
+    try:
+        with pikepdf.open(input_path) as pdf:
+            pdf.save(output_path, linearize=True)
+        return True, f"Successfully linearized {os.path.basename(input_path)}"
+    except Exception as e:
+        return False, f"Error linearizing {os.path.basename(input_path)}: {e}"
+
+def batch_linearize_pdfs(pdf_files, progress_callback=None, stop_event=None):
+    """Linearizes a list of PDF files."""
+    total_files = len(pdf_files)
+    success_count = 0
+    errors = []
+
+    for i, file_path in enumerate(pdf_files):
+        if stop_event and stop_event.is_set():
+            break
+
+        if progress_callback:
+            progress_callback(i + 1, total_files, os.path.basename(file_path))
+
+        directory, filename = os.path.split(file_path)
+        name, ext = os.path.splitext(filename)
+        output_path = os.path.join(directory, f"{name}_linearized{ext}")
+
+        success, msg = linearize_pdf(file_path, output_path)
+        if success:
+            success_count += 1
+        else:
+            errors.append(msg)
+
+    result_msg = f"Batch linearization complete. {success_count}/{total_files} PDFs linearized."
+    if errors:
+        result_msg += "\n\nErrors:\n" + "\n".join(errors)
+
+    return True, result_msg
 
 def create_compilation_pdf(image_directory, orientation='P', include_filename=True, progress_callback=None, use_native_res=False, stop_event=None):
     """

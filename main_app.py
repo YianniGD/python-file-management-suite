@@ -8,7 +8,6 @@ from ui.sorting_tools_tab import SortingToolsTab
 from ui.svg_tab import SVGToolsTab
 from ui.batch_tab import BatchToolsTab
 from ui.renamer_tab import RenamerTab
-from ui.cleaner_tab import CleanerTab
 from ui.mask_tab import MaskToolsTab
 from ui.compress_tab import CompressTab
 from ui.illustrator_to_pdf_tab import IllustratorToPdfTab
@@ -107,9 +106,6 @@ class ImageEditorTools(tk.Tk):
         
         self.renamer_tab = RenamerTab(self.notebook, main_window=self)
         self.notebook.add(self.renamer_tab, text="Renamer") 
-
-        self.cleaner_tab = CleanerTab(self.notebook, main_window=self)
-        self.notebook.add(self.cleaner_tab, text="Code Cleaner") 
 
         # --- GLOBAL STATUS BAR ---
         self.progress_frame = ttk.Frame(self, padding=10)

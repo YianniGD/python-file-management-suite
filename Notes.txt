@@ -1,1 +1,2 @@
-rn this to compile; python -m PyInstaller --noconsole --onefile --name "GraphicDesignSuite" main_app.py
+run this to compile; python -m PyInstaller --noconsole --onefile --name "GraphicDesignSuite" main_app.py
+Run this to install dependencies pip install -r requirements.txt

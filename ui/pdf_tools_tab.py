@@ -3,92 +3,115 @@ from tkinter import ttk, filedialog, messagebox
 import threading
 import os
 from core import pdf_merger, pdf_extractor, pdf_processor
+from ui.ui_utils import DirectorySelector
 
 class PDFToolsTab(ttk.Frame):
     def __init__(self, parent, main_window=None):
         super().__init__(parent, padding=10)
         self.main_window = main_window
+        self.stop_event = threading.Event()
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
         notebook = ttk.Notebook(self)
-        notebook.pack(fill=tk.BOTH, expand=True)
+        notebook.grid(row=0, column=0, sticky="nsew")
 
         merger_frame = self._create_merger_tab(notebook)
         extractor_frame = self._create_extractor_tab(notebook)
         compiler_frame = self._create_compiler_tab(notebook)
+        optimizer_frame = self._create_optimizer_tab(notebook)
 
         notebook.add(merger_frame, text="PDF Merger")
         notebook.add(extractor_frame, text="Image Extractor")
         notebook.add(compiler_frame, text="PDF Compiler")
+        notebook.add(optimizer_frame, text="PDF Optimizer")
+
+    def _create_optimizer_tab(self, parent):
+        frame = ttk.Frame(parent, padding=10)
+        frame.grid_columnconfigure(0, weight=1)
+
+        container = ttk.LabelFrame(frame, text="PDF Linearizer", padding=10)
+        container.grid(row=0, column=0, sticky="ew")
+        container.grid_columnconfigure(0, weight=1)
+        
+        self.linearize_files = []
+        self.lbl_linearize_status = ttk.Label(container, text="No files selected")
+        self.lbl_linearize_status.grid(row=0, column=0, sticky="ew", pady=5)
+        ttk.Button(container, text="Select PDFs", command=self._select_linearize_pdfs).grid(row=1, column=0, sticky="ew")
+
+        action_frame = ttk.Frame(container)
+        action_frame.grid(row=2, column=0, sticky="ew", pady=10)
+        action_frame.grid_columnconfigure(0, weight=1)
+        action_frame.grid_columnconfigure(1, weight=1)
+
+        self.run_btn_linearizer = ttk.Button(action_frame, text="Linearize PDFs", command=self._run_linearizer)
+        self.run_btn_linearizer.grid(row=0, column=0, sticky="ew", pady=10)
+
+        self.stop_btn_linearizer = ttk.Button(action_frame, text="Stop", command=self._stop_process)
+        self.stop_btn_linearizer.grid(row=0, column=1, sticky="ew", padx=(5,0), pady=10)
+        self.stop_btn_linearizer.grid_remove()
+        
+        return frame
+
 
     def _create_merger_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
-
-        # --- Merger UI ---
-        self.source_path = tk.StringVar()
-        self.title_var = tk.StringVar(value="My Portfolio")
+        frame.grid_columnconfigure(0, weight=1)
 
         container = ttk.LabelFrame(frame, text="Combine PDFs with TOC", padding=10)
-        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        container.grid(row=0, column=0, sticky="ew")
+        container.grid_columnconfigure(0, weight=1)
 
-        ttk.Label(container, text="Folder Containing PDFs:").pack(anchor="w")
-        
-        input_frame = ttk.Frame(container)
-        input_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Entry(input_frame, textvariable=self.source_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(input_frame, text="Browse", command=self._browse_merger).pack(side=tk.LEFT, padx=(5,0))
+        self.merger_dir_selector = DirectorySelector(container, "Folder Containing PDFs:")
+        self.merger_dir_selector.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
-        ttk.Label(container, text="Title Page Header:").pack(anchor="w", pady=(15, 0))
-        ttk.Entry(container, textvariable=self.title_var).pack(fill=tk.X, pady=5)
+        ttk.Label(container, text="Title Page Header:").grid(row=1, column=0, sticky="w")
+        self.title_var = tk.StringVar(value="My Portfolio")
+        ttk.Entry(container, textvariable=self.title_var).grid(row=2, column=0, sticky="ew", pady=(0, 5))
 
         info_lbl = ttk.Label(container, text="This will merge all .pdf files in the folder sorted alphabetically.\nIt generates a Title Page, visual Table of Contents, and clickable bookmarks.", foreground="gray", justify="left")
-        info_lbl.pack(anchor="w", pady=10)
+        info_lbl.grid(row=3, column=0, sticky="w", pady=10)
 
         self.run_btn_merger = ttk.Button(container, text="Merge PDFs", command=self._run_merger)
-        self.run_btn_merger.pack(fill=tk.X, pady=10)
+        self.run_btn_merger.grid(row=4, column=0, sticky="ew", pady=10)
         
         return frame
 
     def _create_extractor_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
+        frame.grid_columnconfigure(0, weight=1)
         
-        # --- Extractor UI ---
         self.pdf_files = []
         container = ttk.LabelFrame(frame, text="PDF to Image Extractor", padding=10)
-        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        container.grid(row=0, column=0, sticky="ew")
+        container.grid_columnconfigure(0, weight=1)
 
         self.lbl_status = ttk.Label(container, text="No files selected")
-        self.lbl_status.pack(pady=5)
-        ttk.Button(container, text="Select PDFs", command=self._select_extractor).pack(fill=tk.X)
+        self.lbl_status.grid(row=0, column=0, sticky="ew", pady=5)
+        ttk.Button(container, text="Select PDFs", command=self._select_extractor).grid(row=1, column=0, sticky="ew")
 
-        ttk.Label(container, text="Output Directory:").pack(anchor="w", pady=(15,0))
-        self.out_path = tk.StringVar()
-        row = ttk.Frame(container)
-        row.pack(fill=tk.X, pady=5)
-        ttk.Entry(row, textvariable=self.out_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(row, text="Browse", command=self._browse_out_extractor).pack(side=tk.LEFT, padx=5)
+        self.extractor_out_selector = DirectorySelector(container, "Output Directory:")
+        self.extractor_out_selector.grid(row=2, column=0, sticky="ew", pady=(15, 0))
 
         self.run_btn_extractor = ttk.Button(container, text="Extract All Pages", command=self._run_extractor)
-        self.run_btn_extractor.pack(fill=tk.X, pady=20)
+        self.run_btn_extractor.grid(row=3, column=0, sticky="ew", pady=20)
 
         return frame
 
     def _create_compiler_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
-        
-        self.stop_event = threading.Event()
+        frame.grid_columnconfigure(0, weight=1)
 
-        # --- Compiler UI ---
         comp_frame = ttk.LabelFrame(frame, text="Dark Mode Compilation PDF", padding=10)
-        comp_frame.pack(fill=tk.X, padx=10, pady=5)
+        comp_frame.grid(row=0, column=0, sticky="ew", pady=5)
+        comp_frame.grid_columnconfigure(0, weight=1)
         
-        ttk.Label(comp_frame, text="Source Folder (Images):").pack(anchor="w")
-        self.pdf_comp_entry = ttk.Entry(comp_frame)
-        self.pdf_comp_entry.pack(fill=tk.X, pady=5)
-        ttk.Button(comp_frame, text="Browse", command=self._browse_pdf_comp).pack(fill=tk.X)
+        self.compiler_dir_selector = DirectorySelector(comp_frame, "Source Folder (Images):")
+        self.compiler_dir_selector.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         
         opts_frame = ttk.Frame(comp_frame)
-        opts_frame.pack(fill=tk.X, pady=5)
+        opts_frame.grid(row=1, column=0, sticky="ew", pady=5)
         ttk.Label(opts_frame, text="Orientation:").pack(side=tk.LEFT, padx=(0,5))
         self.pdf_orient_var = tk.StringVar(value="P")
         ttk.Radiobutton(opts_frame, text="Portrait", variable=self.pdf_orient_var, value="P").pack(side=tk.LEFT, padx=5)
@@ -104,42 +127,40 @@ class PDFToolsTab(ttk.Frame):
         ttk.Checkbutton(opts_frame, text="Include Filenames", variable=self.pdf_filename_var).pack(side=tk.LEFT, padx=20)
 
         action_frame = ttk.Frame(comp_frame)
-        action_frame.pack(fill=tk.X, pady=10)
+        action_frame.grid(row=2, column=0, sticky="ew", pady=10)
+        action_frame.grid_columnconfigure(0, weight=1)
+        action_frame.grid_columnconfigure(1, weight=1)
+
 
         self.generate_btn = ttk.Button(action_frame, text="Generate Compilation PDF", command=self._run_pdf_comp)
-        self.generate_btn.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        self.generate_btn.grid(row=0, column=0, sticky="ew")
 
         self.stop_btn = ttk.Button(action_frame, text="Stop", command=self._stop_process)
-        self.stop_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(5,0))
-        self.stop_btn.pack_forget()
+        self.stop_btn.grid(row=0, column=1, sticky="ew", padx=(5,0))
+        self.stop_btn.grid_remove()
 
         sheet_frame = ttk.LabelFrame(frame, text="Contact Sheet Generator (Grid)", padding=10)
-        sheet_frame.pack(fill=tk.X, padx=10, pady=10)
+        sheet_frame.grid(row=1, column=0, sticky="ew", pady=10)
+        sheet_frame.grid_columnconfigure(0, weight=1)
         
-        ttk.Label(sheet_frame, text="Source Folder (Images):").pack(anchor="w")
-        self.pdf_sheet_entry = ttk.Entry(sheet_frame)
-        self.pdf_sheet_entry.pack(fill=tk.X, pady=5)
-        ttk.Button(sheet_frame, text="Browse", command=self._browse_pdf_sheet).pack(fill=tk.X)
+        self.sheet_dir_selector = DirectorySelector(sheet_frame, "Source Folder (Images):")
+        self.sheet_dir_selector.grid(row=0, column=0, sticky="ew", pady=(0, 10))
         
         col_frame = ttk.Frame(sheet_frame)
-        col_frame.pack(fill=tk.X, pady=5)
+        col_frame.grid(row=1, column=0, sticky="ew", pady=5)
         ttk.Label(col_frame, text="Columns:").pack(side=tk.LEFT)
         self.pdf_sheet_cols = ttk.Entry(col_frame, width=5)
         self.pdf_sheet_cols.insert(0, "3")
         self.pdf_sheet_cols.pack(side=tk.LEFT, padx=5)
 
         self.sheet_btn = ttk.Button(sheet_frame, text="Generate Contact Sheet", command=self._run_pdf_sheet)
-        self.sheet_btn.pack(fill=tk.X, pady=10)
+        self.sheet_btn.grid(row=2, column=0, sticky="ew", pady=10)
 
         return frame
 
     # --- Merger Methods ---
-    def _browse_merger(self):
-        d = filedialog.askdirectory()
-        if d: self.source_path.set(d)
-
     def _run_merger(self):
-        src = self.source_path.get()
+        src = self.merger_dir_selector.get()
         title = self.title_var.get()
 
         if not src:
@@ -190,12 +211,8 @@ class PDFToolsTab(ttk.Frame):
             self.pdf_files = f
             self.lbl_status.config(text=f"{len(f)} files selected")
 
-    def _browse_out_extractor(self):
-        d = filedialog.askdirectory()
-        if d: self.out_path.set(d)
-
     def _run_extractor(self):
-        out = self.out_path.get()
+        out = self.extractor_out_selector.get()
         if not self.pdf_files or not out:
             messagebox.showerror("Error", "Select files and output folder.")
             return
@@ -221,31 +238,60 @@ class PDFToolsTab(ttk.Frame):
             
         self.after(0, lambda: messagebox.showinfo("Done", f"Processed {count} PDFs."))
 
+    # --- Optimizer Methods ---
+    def _select_linearize_pdfs(self):
+        f = filedialog.askopenfilenames(filetypes=[("PDF", "*.pdf")])
+        if f:
+            self.linearize_files = f
+            self.lbl_linearize_status.config(text=f"{len(f)} files selected")
+
+    def _run_linearizer(self):
+        if not self.linearize_files:
+            messagebox.showerror("Error", "Please select PDF files to linearize.")
+            return
+
+        self.run_btn_linearizer.grid_remove()
+        self.stop_btn_linearizer.grid()
+        self.stop_btn_linearizer.config(state="normal")
+
+        if self.main_window:
+            self.main_window.progress_label.config(text="Linearizing PDFs...")
+            self.main_window.progress_bar['value'] = 0
+        
+        self.stop_event.clear()
+        
+        threading.Thread(target=self._thread_linearizer, args=(self.linearize_files, self.stop_event), daemon=True).start()
+
+    def _thread_linearizer(self, files, stop_event):
+        cb = lambda c, t, m: self.after(0, self._update_progress, c, t, m)
+        
+        success, msg = pdf_processor.batch_linearize_pdfs(
+            files, progress_callback=cb, stop_event=stop_event
+        )
+
+        def cleanup_ui():
+            self.stop_btn_linearizer.grid_remove()
+            self.run_btn_linearizer.grid()
+            if self.main_window:
+                self.main_window.progress_label.config(text="Ready.")
+                self.main_window.progress_bar.config(value=0)
+            messagebox.showinfo("Result", msg) if success else messagebox.showerror("Error", msg)
+
+        self.after(0, cleanup_ui)
+
     # --- Compiler Methods ---
-    def _browse_pdf_comp(self):
-        d = filedialog.askdirectory()
-        if d: 
-            self.pdf_comp_entry.delete(0, tk.END)
-            self.pdf_comp_entry.insert(0, d)
-
-    def _browse_pdf_sheet(self):
-        d = filedialog.askdirectory()
-        if d: 
-            self.pdf_sheet_entry.delete(0, tk.END)
-            self.pdf_sheet_entry.insert(0, d)
-
     def _stop_process(self):
         self.stop_event.set()
         self.stop_btn.config(state="disabled")
 
     def _run_pdf_comp(self):
-        path = self.pdf_comp_entry.get()
+        path = self.compiler_dir_selector.get()
         if not path: 
             return messagebox.showerror("Error", "Select a folder.")
         
         self.stop_event.clear()
-        self.generate_btn.pack_forget()
-        self.stop_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(5,0))
+        self.generate_btn.grid_remove()
+        self.stop_btn.grid()
         self.stop_btn.config(state="normal")
         
         if self.main_window:
@@ -279,8 +325,8 @@ class PDFToolsTab(ttk.Frame):
             )
         
         def cleanup_ui():
-            self.stop_btn.pack_forget()
-            self.generate_btn.pack(side=tk.LEFT, expand=True, fill=tk.X)
+            self.stop_btn.grid_remove()
+            self.generate_btn.grid()
             if self.main_window:
                 self.main_window.progress_label.config(text="Ready.")
                 self.main_window.progress_bar.config(value=0)
@@ -289,7 +335,7 @@ class PDFToolsTab(ttk.Frame):
         self.after(0, cleanup_ui)
 
     def _run_pdf_sheet(self):
-        path = self.pdf_sheet_entry.get()
+        path = self.sheet_dir_selector.get()
         try:
             cols = int(self.pdf_sheet_cols.get())
         except ValueError:
