@@ -39,7 +39,6 @@ missing module named multiprocessing.set_start_method - imported by multiprocess
 missing module named multiprocessing.get_start_method - imported by multiprocessing (top-level), multiprocessing.spawn (top-level)
 missing module named pyimod02_importers - imported by C:\Users\ygali\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\PyInstaller\hooks\rthooks\pyi_rth_pkgutil.py (delayed)
 missing module named collections.Mapping - imported by collections (optional), pytz.lazy (optional)
-missing module named 'win32com.gen_py' - imported by win32com (conditional, optional)
 missing module named asyncio.DefaultEventLoopPolicy - imported by asyncio (delayed, conditional), asyncio.events (delayed, conditional)
 missing module named annotationlib - imported by typing_extensions (conditional)
 missing module named _dummy_thread - imported by numpy._core.arrayprint (optional)
@@ -337,3 +336,4 @@ missing module named pymupdf_fonts - imported by pymupdf (delayed, conditional, 
 missing module named mupdf - imported by pymupdf (conditional, optional), pymupdf.utils (optional)
 missing module named __builtin__ - imported by pymupdf.extra (optional), pymupdf.mupdf (optional)
 missing module named mupdf_cppyy - imported by pymupdf (conditional)
+missing module named 'win32com.gen_py' - imported by win32com (conditional, optional)

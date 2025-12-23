@@ -5,19 +5,16 @@ import os
 # --- IMPORT MODULES ---
 from ui.pdf_tools_tab import PDFToolsTab
 from ui.sorting_tools_tab import SortingToolsTab
-from ui.svg_tab import SVGToolsTab
 from ui.batch_tab import BatchToolsTab
 from ui.renamer_tab import RenamerTab
 from ui.mask_tab import MaskToolsTab
-from ui.compress_tab import CompressTab
-from ui.illustrator_to_pdf_tab import IllustratorToPdfTab
-from ui.illustrator_to_svg_tab import IllustratorToSvgTab
+from ui.svg_tab import SVGToolsTab
 from core.theme import COLORS, FONTS # Import your new theme
 
-class ImageEditorTools(tk.Tk):
+class FileManagementSuite(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Graphic Design Suite")
+        self.title("File Management Suite")
         self.geometry("900x650")
 
         # --- THEME SETUP ---
@@ -75,37 +72,25 @@ class ImageEditorTools(tk.Tk):
 
         # --- LOAD TABS ---
         
-        # 1. Image Tools
-        self.batch_tab = BatchToolsTab(self.notebook, main_window=self)
-        self.notebook.add(self.batch_tab, text="Batch Images")
-
-        self.mask_tab = MaskToolsTab(self.notebook, main_window=self)
-        self.notebook.add(self.mask_tab, text="Crop/Mask")  
+        # 1. Batch Processing
+        batch_notebook = ttk.Notebook(self.notebook)
+        self.batch_tab = BatchToolsTab(batch_notebook, main_window=self)
+        self.renamer_tab = RenamerTab(batch_notebook, main_window=self)
+        self.mask_tab = MaskToolsTab(batch_notebook, main_window=self)
+        self.svg_tab = SVGToolsTab(batch_notebook, main_window=self)
+        batch_notebook.add(self.batch_tab, text="Batch Images")
+        batch_notebook.add(self.renamer_tab, text="Renamer")
+        batch_notebook.add(self.mask_tab, text="Crop/Mask")
+        batch_notebook.add(self.svg_tab, text="SVG Merger")
+        self.notebook.add(batch_notebook, text="Batch Processing")
 
         # 2. PDF Tools
         self.pdf_tools_tab = PDFToolsTab(self.notebook, main_window=self)
         self.notebook.add(self.pdf_tools_tab, text="PDF Tools")
 
-        self.compress_tab = CompressTab(self.notebook, main_window=self)
-        self.notebook.add(self.compress_tab, text="PDF Compressor")
-
         # 3. Sorting Tools
         self.sorting_tools_tab = SortingToolsTab(self.notebook, main_window=self)
         self.notebook.add(self.sorting_tools_tab, text="Sorting Tools")
-
-        # 4. Converters
-        self.illustrator_to_pdf_tab = IllustratorToPdfTab(self.notebook, main_window=self)
-        self.notebook.add(self.illustrator_to_pdf_tab, text="AI to PDF")
-
-        self.illustrator_to_svg_tab = IllustratorToSvgTab(self.notebook, main_window=self)
-        self.notebook.add(self.illustrator_to_svg_tab, text="AI to SVG")
-
-        # 5. Utilities
-        self.svg_tab = SVGToolsTab(self.notebook, main_window=self)
-        self.notebook.add(self.svg_tab, text="SVG Merger")
-        
-        self.renamer_tab = RenamerTab(self.notebook, main_window=self)
-        self.notebook.add(self.renamer_tab, text="Renamer") 
 
         # --- GLOBAL STATUS BAR ---
         self.progress_frame = ttk.Frame(self, padding=10)
@@ -116,5 +101,5 @@ class ImageEditorTools(tk.Tk):
         self.progress_bar.pack(fill=tk.X, pady=2)
 
 if __name__ == "__main__":
-    app = ImageEditorTools()
+    app = FileManagementSuite()
     app.mainloop()

@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 
-def sort_by_name_pattern(directory, pattern_regex, min_files=2):
+def sort_by_name_pattern(directory, pattern_regex, min_files=2, ignore_spaces=False, char_count=None):
     """
     Sorts files based on a regex pattern.
     Uses re.search() to find the pattern ANYWHERE in the filename.
@@ -25,29 +25,34 @@ def sort_by_name_pattern(directory, pattern_regex, min_files=2):
         dirs[:] = [d for d in dirs if d not in potential_folders]
 
         for filename in files:
-            if filename.startswith('.'): continue
+                        if filename.startswith('.'): continue
+                        
+                        fname_to_check = os.path.basename(filename) # Use only the filename for processing
+                        if ignore_spaces:
+                            fname_to_check = fname_to_check.replace(' ', '')
+                        
+                        if char_count is not None:
+                            fname_to_check = fname_to_check[:char_count]
             
-            # CHANGE: .search() looks anywhere in the string. 
-            # .match() only looked at the beginning.
-            match = pattern.search(filename)
-            
-            if match:
-                # Combine capture groups to make the folder name
-                # If your regex is "(BW)", it captures "BW" -> Folder "bw"
-                parts = [g for g in match.groups() if g]
-                
-                if not parts: 
-                    continue # Pattern matched but no capturing group () defined
-                
-                # Create a clean folder name
-                folder_name = "_".join(parts).lower().strip()
-                
-                if folder_name not in groups:
-                    groups[folder_name] = []
-                    potential_folders.add(folder_name)
-                
-                full_path = os.path.join(root, filename)
-                groups[folder_name].append(full_path)
+                        match = pattern.search(fname_to_check)
+                        
+                        if match:
+                            # Combine capture groups to make the folder name
+                            # If your regex is "(BW)", it captures "BW" -> Folder "bw"
+                            parts = [g for g in match.groups() if g]
+                            
+                            if not parts: 
+                                continue # Pattern matched but no capturing group () defined
+                            
+                            # Create a clean folder name
+                            folder_name = "_".join(parts).lower().strip()
+                            
+                            if folder_name not in groups:
+                                groups[folder_name] = []
+                                potential_folders.add(folder_name)
+                            
+                            full_path = os.path.join(root, filename)
+                            groups[folder_name].append(full_path)
 
     # --- PASS 2: FILTER AND MOVE ---
     moved_count = 0

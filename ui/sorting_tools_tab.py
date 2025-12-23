@@ -64,8 +64,25 @@ class SortingToolsTab(ttk.Frame):
         spin = ttk.Spinbox(config_frame, from_=1, to=100, textvariable=self.threshold_var, width=5)
         spin.grid(row=2, column=1, sticky="w", padx=10, pady=5)
 
-        ttk.Button(container, text="Analyze and Sort", command=self._run_pattern).pack(fill=tk.X, pady=20)
+        # Grid row 3: Ignore Spaces
+        self.ignore_spaces_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(config_frame, text="Ignore spaces in filenames (for matching)", variable=self.ignore_spaces_var).grid(row=3, column=0, columnspan=2, sticky="w", pady=5)
 
+        # Grid row 4: Character Limit
+        self.char_limit_enabled_var = tk.BooleanVar(value=False)
+        self.char_limit_var = tk.IntVar(value=15)
+        
+        char_limit_frame = ttk.Frame(config_frame)
+        char_limit_frame.grid(row=4, column=0, columnspan=2, sticky="w")
+        
+        self.char_limit_check = ttk.Checkbutton(char_limit_frame, text="Limit match to first", variable=self.char_limit_enabled_var, command=self._toggle_char_limit)
+        self.char_limit_check.pack(side=tk.LEFT)
+        
+        self.char_limit_spinbox = ttk.Spinbox(char_limit_frame, from_=1, to=100, textvariable=self.char_limit_var, width=5, state="disabled")
+        self.char_limit_spinbox.pack(side=tk.LEFT, padx=5)
+        ttk.Label(char_limit_frame, text="characters").pack(side=tk.LEFT)
+
+        ttk.Button(container, text="Analyze and Sort", command=self._run_pattern).pack(fill=tk.X, pady=20)
         return frame
 
     def _create_structure_sort_tab(self, parent):
@@ -103,7 +120,24 @@ class SortingToolsTab(ttk.Frame):
         self.run_ext_btn = ttk.Button(f2, text="Run Extension Sort", command=self._run_ext)
         self.run_ext_btn.pack(fill=tk.X, pady=5)
 
+        f3 = ttk.LabelFrame(frame, text="Delete Empty Folders", padding=10)
+        f3.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(f3, text="Scans the selected directory and removes any empty subfolders.", wraplength=350).pack(anchor="w")
+        
+        row3 = ttk.Frame(f3)
+        row3.pack(fill=tk.X, pady=5)
+        self.path3_structure = tk.StringVar()
+        ttk.Entry(row3, textvariable=self.path3_structure).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(row3, text="Browse", command=lambda: self._browse_structure(self.path3_structure)).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(f3, text="Find and Delete Empty Folders", command=self._run_delete_empty).pack(fill=tk.X, pady=5)
+
         return frame
+
+    def _toggle_char_limit(self):
+        state = "normal" if self.char_limit_enabled_var.get() else "disabled"
+        self.char_limit_spinbox.config(state=state)
 
     def _create_photo_sort_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
@@ -176,11 +210,20 @@ class SortingToolsTab(ttk.Frame):
             min_count = self.threshold_var.get()
         except:
             min_count = 1
+        
+        ignore_spaces = self.ignore_spaces_var.get()
+        char_count = None
+        if self.char_limit_enabled_var.get():
+            try:
+                char_count = self.char_limit_var.get()
+            except tk.TclError:
+                messagebox.showerror("Error", "Invalid character count value.")
+                return
 
         if self.main_window:
             self.main_window.progress_label.config(text="Scanning file patterns...")
 
-        success, msg = pattern_sorter.sort_by_name_pattern(directory, regex, min_count)
+        success, msg = pattern_sorter.sort_by_name_pattern(directory, regex, min_count, ignore_spaces, char_count)
         
         if self.main_window:
             self.main_window.progress_label.config(text="Ready.")
@@ -200,6 +243,23 @@ class SortingToolsTab(ttk.Frame):
             self.main_window.progress_label.config(text="Consolidating folders...")
             
         success, msg = structure_sorter.consolidate_single_files(d)
+        
+        if self.main_window:
+            self.main_window.progress_label.config(text="Ready.")
+            
+        messagebox.showinfo("Result", msg)
+
+    def _run_delete_empty(self):
+        d = self.path3_structure.get()
+        if not d: return messagebox.showerror("Error", "Select a folder.")
+
+        if not messagebox.askyesno("Confirm", "Are you sure you want to permanently delete all empty folders in this directory? This cannot be undone."):
+            return
+        
+        if self.main_window:
+            self.main_window.progress_label.config(text="Scanning for empty folders...")
+            
+        success, msg = structure_sorter.delete_empty_folders(d)
         
         if self.main_window:
             self.main_window.progress_label.config(text="Ready.")

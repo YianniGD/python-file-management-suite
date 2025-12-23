@@ -94,3 +94,29 @@ def sort_by_extension(source_dirs, centralize=False, progress_callback=None):
             print(f"Error moving {filename}: {e}")
 
     return True, f"Sorted {moved_count} files by file type."
+
+def delete_empty_folders(directory):
+    """
+    Deletes all empty subdirectories within a given directory.
+    """
+    if not os.path.isdir(directory):
+        return False, "Invalid directory provided."
+
+    deleted_count = 0
+    # We walk bottom-up to ensure we delete nested empty folders correctly.
+    for root, dirs, files in os.walk(directory, topdown=False):
+        if not dirs and not files:
+            # We should not delete the root directory itself, even if it becomes empty
+            if os.path.samefile(root, directory):
+                continue
+            try:
+                os.rmdir(root)
+                deleted_count += 1
+            except OSError as e:
+                # This could happen if there's a race condition or permission error
+                print(f"Error removing directory {root}: {e}")
+    
+    if deleted_count == 0:
+        return True, "No empty folders found to delete."
+        
+    return True, f"Successfully deleted {deleted_count} empty folders."

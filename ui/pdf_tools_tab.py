@@ -4,6 +4,8 @@ import threading
 import os
 from core import pdf_merger, pdf_extractor, pdf_processor
 from ui.ui_utils import DirectorySelector
+from ui.compress_tab import CompressTab
+from ui.illustrator_to_pdf_tab import IllustratorToPdfTab
 
 class PDFToolsTab(ttk.Frame):
     def __init__(self, parent, main_window=None):
@@ -26,6 +28,12 @@ class PDFToolsTab(ttk.Frame):
         notebook.add(extractor_frame, text="Image Extractor")
         notebook.add(compiler_frame, text="PDF Compiler")
         notebook.add(optimizer_frame, text="PDF Optimizer")
+
+        compress_tab = CompressTab(notebook, main_window=self.main_window)
+        notebook.add(compress_tab, text="PDF Compressor")
+
+        illustrator_to_pdf_tab = IllustratorToPdfTab(notebook, main_window=self.main_window)
+        notebook.add(illustrator_to_pdf_tab, text="AI to PDF")
 
     def _create_optimizer_tab(self, parent):
         frame = ttk.Frame(parent, padding=10)
